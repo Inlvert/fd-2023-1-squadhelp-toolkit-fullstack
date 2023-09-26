@@ -38,8 +38,8 @@ router.post(
   userController.payment,
 );
 
-router.post(
-  '/getCustomersContests',
+router.get(
+  '/customersContests',
   checkToken.checkToken,
   contestController.getCustomersContests,
 );
