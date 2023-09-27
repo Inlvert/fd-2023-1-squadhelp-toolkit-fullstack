@@ -248,33 +248,36 @@ module.exports.getCustomersContests = async (req, res, next) => {
 };
 
 
-module.exports.getContests = (req, res, next) => {
-  const predicates = UtilFunctions.createWhereForAllContests(req.body.typeIndex,
-    req.body.contestId, req.body.industry, req.body.awardSort);
-  db.Contests.findAll({
-    where: predicates.where,
-    order: predicates.order,
-    limit: req.body.limit,
-    offset: req.body.offset ? req.body.offset : 0,
-    include: [
-      {
-        model: db.Offers,
-        required: req.body.ownEntries,
-        where: req.body.ownEntries ? { userId: req.tokenData.userId } : {},
-        attributes: ['id'],
-      },
-    ],
-  })
-    .then(contests => {
-      contests.forEach(
-        contest => contest.dataValues.count = contest.dataValues.Offers.length);
-      let haveMore = true;
-      if (contests.length === 0) {
-        haveMore = false;
-      }
-      res.send({ contests, haveMore });
-    })
-    .catch(err => {
-      next(new ServerError());
+module.exports.getContests = async (req, res, next) => {
+  try {
+    const predicates = UtilFunctions.createWhereForAllContests(
+      req.params.typeIndex,
+      req.params.contestId,
+      req.params.industry,
+      req.params.awardSort
+    );
+
+    const contests = await db.Contests.findAll({
+      where: predicates.where,
+      order: predicates.order,
+      limit: req.params.limit,
+      offset: req.query.offset ? req.query.offset : 0,
+      include: [
+        {
+          model: db.Offers,
+          required: req.params.ownEntries,
+          where: req.params.ownEntries ? { userId: req.tokenData.userId } : {},
+          attributes: ['id'],
+        },
+      ],
     });
+
+    contests.forEach( contest => contest.dataValues.count = contest.dataValues.Offers.length );
+
+    const haveMore = contests.length !== 0;
+    res.send({ contests, haveMore });
+
+  } catch (error) {
+    next(new ServerError(error));
+  }
 };
